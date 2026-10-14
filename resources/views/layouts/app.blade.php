@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Sistem Penanganan Sampah Liar - Kab. Brebes')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @stack('styles')
 </head>
 <body class="d-flex flex-column min-vh-100 bg-light">
     <!-- Navbar Navigasi Utama -->
@@ -97,5 +98,7 @@
             &copy; {{ date('Y') }} Sistem Pelaporan dan Penentuan Prioritas Penanganan Sampah Liar (Metode AHP-WSM) &bull; Kabupaten Brebes
         </div>
     </footer>
+
+    @stack('scripts')
 </body>
 </html>

@@ -18,6 +18,8 @@ class Report extends Model
         'subdistrict',
         'village',
         'address_detail',
+        'latitude',
+        'longitude',
         'description',
         'photo_path',
         'resolution_photo',
@@ -31,6 +33,8 @@ class Report extends Model
     {
         return [
             'verified_at' => 'datetime',
+            'latitude' => 'decimal:7',
+            'longitude' => 'decimal:7',
         ];
     }
 

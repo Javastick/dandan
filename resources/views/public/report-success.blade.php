@@ -40,6 +40,17 @@
                             <span class="col-4 text-muted">Patokan:</span>
                             <span class="col-8">{{ $report->address_detail }}</span>
                         </div>
+                        @if($report->latitude && $report->longitude)
+                        <div class="row mb-1">
+                            <span class="col-4 text-muted">Koordinat Peta:</span>
+                            <span class="col-8">
+                                <a href="https://www.google.com/maps?q={{ $report->latitude }},{{ $report->longitude }}" target="_blank" class="text-decoration-none font-monospace small">
+                                    <i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ $report->latitude }}, {{ $report->longitude }}
+                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                </a>
+                            </span>
+                        </div>
+                        @endif
                         <div class="row">
                             <span class="col-4 text-muted">Waktu Lapor:</span>
                             <span class="col-8">{{ $report->created_at->format('d M Y, H:i') }} WIB</span>

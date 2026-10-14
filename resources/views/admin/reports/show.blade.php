@@ -2,6 +2,20 @@
 
 @section('title', 'Detail Laporan Warga - ' . $report->ticket_code)
 
+@if($report->latitude && $report->longitude)
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+    #adminReportMap {
+        height: 240px;
+        width: 100%;
+        border-radius: 0.5rem;
+        z-index: 1;
+    }
+</style>
+@endpush
+@endif
+
 @section('content')
 <div class="row mb-3">
     <div class="col-12">
@@ -55,9 +69,26 @@
                     <dt class="col-sm-4 text-muted">Patokan Lokasi</dt>
                     <dd class="col-sm-8">{{ $report->address_detail }}</dd>
 
+                    @if($report->latitude && $report->longitude)
+                        <dt class="col-sm-4 text-muted">Koordinat Titik</dt>
+                        <dd class="col-sm-8 font-monospace">
+                            <a href="https://www.google.com/maps?q={{ $report->latitude }},{{ $report->longitude }}" target="_blank" class="text-decoration-none">
+                                <i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ $report->latitude }}, {{ $report->longitude }}
+                                <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                            </a>
+                        </dd>
+                    @endif
+
                     <dt class="col-sm-4 text-muted">Keterangan Sampah</dt>
                     <dd class="col-sm-8">{{ $report->description }}</dd>
                 </dl>
+
+                @if($report->latitude && $report->longitude)
+                    <div class="mt-3">
+                        <label class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-map me-1 text-success"></i>Peta Lokasi Sampah (Koordinat GPS Pelapor)</label>
+                        <div id="adminReportMap" class="shadow-sm border"></div>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
@@ -269,3 +300,26 @@
     </div>
 </div>
 @endsection
+
+@if($report->latitude && $report->longitude)
+@push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const lat = {{ $report->latitude }};
+    const lng = {{ $report->longitude }};
+    
+    const map = L.map('adminReportMap').setView([lat, lng], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
+        maxZoom: 19
+    }).addTo(map);
+
+    L.marker([lat, lng])
+        .addTo(map)
+        .bindPopup('<strong>Lokasi Aduan: {{ $report->ticket_code }}</strong><br><small>{{ $report->village }}, Kec. {{ $report->subdistrict }}</small>')
+        .openPopup();
+});
+</script>
+@endpush
+@endif

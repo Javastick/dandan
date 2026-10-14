@@ -2,6 +2,30 @@
 
 @section('title', 'Lapor Sampah Liar - Kabupaten Brebes')
 
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+    #map {
+        height: 380px;
+        width: 100%;
+        border-radius: 0.5rem;
+        z-index: 1;
+    }
+    .leaflet-popup-content-wrapper {
+        border-radius: 8px;
+        font-family: inherit;
+    }
+    .location-btn-pulse {
+        animation: pulse-glow 2s infinite;
+    }
+    @keyframes pulse-glow {
+        0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(25, 135, 84, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="container py-4">
     <div class="row justify-content-center">
@@ -23,12 +47,18 @@
                     <div class="alert alert-info py-2 px-3 small d-flex align-items-center gap-2 mb-4">
                         <i class="bi bi-info-circle-fill fs-5"></i>
                         <div>
-                            <strong>Mode Demonstrasi Prototipe:</strong> Anda dapat mengunggah foto tumpukan sampah nyata atau gambar sampel untuk menguji alur verifikasi sistem.
+                            <strong>Petunjuk Lokasi:</strong> Cukup tekan tombol <em>"Lokasi Saat Ini"</em> atau klik pada peta. Nama desa dan kecamatan akan terisi otomatis.
                         </div>
                     </div>
 
-                    <form action="{{ route('report.store') }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('report.store') }}" method="POST" enctype="multipart/form-data" id="reportForm">
                         @csrf
+
+                        <!-- Hidden Inputs untuk Koordinat & Wilayah Otomatis -->
+                        <input type="hidden" name="latitude" id="latitude" value="{{ old('latitude') }}">
+                        <input type="hidden" name="longitude" id="longitude" value="{{ old('longitude') }}">
+                        <input type="hidden" name="subdistrict" id="subdistrict" value="{{ old('subdistrict') }}">
+                        <input type="hidden" name="village" id="village" value="{{ old('village') }}">
 
                         <!-- Identitas Pelapor -->
                         <div class="card bg-light border-0 p-3 mb-4">
@@ -41,7 +71,7 @@
                                            id="reporter_name" 
                                            class="form-control @error('reporter_name') is-invalid @enderror" 
                                            value="{{ old('reporter_name') }}" 
-                                           placeholder="Contoh: Budi Santoso" 
+                                           placeholder="Masukkan nama" 
                                            required>
                                     @error('reporter_name')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -55,7 +85,7 @@
                                            id="reporter_phone" 
                                            class="form-control @error('reporter_phone') is-invalid @enderror" 
                                            value="{{ old('reporter_phone') }}" 
-                                           placeholder="Contoh: 081234567890" 
+                                           placeholder="Masukkan nomor hp" 
                                            required>
                                     @error('reporter_phone')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -64,57 +94,66 @@
                             </div>
                         </div>
 
-                        <!-- Lokasi Sampah Liar -->
+                        <!-- Titik Lokasi Peta & Wilayah Otomatis -->
                         <div class="card bg-light border-0 p-3 mb-4">
-                            <h6 class="fw-bold text-dark mb-3"><i class="bi bi-geo-alt me-2"></i>Lokasi Tumpukan Sampah</h6>
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <label for="subdistrict" class="form-label small fw-semibold">Kecamatan <span class="text-danger">*</span></label>
-                                    <select name="subdistrict" id="subdistrict" class="form-select @error('subdistrict') is-invalid @enderror" required>
-                                        <option value="">-- Pilih Kecamatan --</option>
-                                        @foreach($subdistricts as $kec)
-                                            <option value="{{ $kec }}" {{ old('subdistrict') === $kec ? 'selected' : '' }}>
-                                                {{ $kec }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('subdistrict')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-geo-alt me-2"></i>Titik Lokasi Sampah</h6>
+                                <button type="button" 
+                                        id="btnCurrentLocation" 
+                                        class="btn btn-success btn-sm fw-semibold shadow-sm location-btn-pulse">
+                                    <i class="bi bi-crosshair me-1"></i> Lokasi Saat Ini
+                                </button>
+                            </div>
 
-                                <div class="col-md-6">
-                                    <label for="village" class="form-label small fw-semibold">Desa / Kelurahan <span class="text-danger">*</span></label>
-                                    <input type="text" 
-                                           name="village" 
-                                           id="village" 
-                                           class="form-control @error('village') is-invalid @enderror" 
-                                           value="{{ old('village') }}" 
-                                           placeholder="Contoh: Klampok" 
-                                           required>
-                                    @error('village')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                            <p class="text-muted small mb-3">
+                                Klik tombol <strong>"Lokasi Saat Ini"</strong> agar sistem mendeteksi posisi Anda, atau ketuk/geser pin langsung pada peta.
+                            </p>
+
+                            <!-- Alert Status Geolocation -->
+                            <div id="geoAlert" class="alert d-none py-2 px-3 small align-items-center gap-2 mb-3"></div>
+
+                            <!-- Kontainer Peta Leaflet -->
+                            <div class="position-relative mb-3">
+                                <div id="map" class="shadow-sm border"></div>
+                            </div>
+
+                            <!-- Info Text Wilayah Terdeteksi Otomatis (Tanpa Tampilan Koordinat Rumit) -->
+                            <div class="card border border-success-subtle bg-white shadow-sm p-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div id="locationIconBox" class="bg-success-subtle text-success p-2 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
+                                        <i class="bi bi-pin-map-fill"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="text-muted small fw-semibold text-uppercase tracking-wider">Wilayah Lokasi Terdeteksi</div>
+                                        <div id="locationNameDisplay" class="fw-bold text-dark fs-6">
+                                            @if(old('village') || old('subdistrict'))
+                                                {{ old('village', 'Desa') }}, Kec. {{ old('subdistrict', 'Brebes') }}
+                                            @else
+                                                Belum ditentukan
+                                            @endif
+                                        </div>
+                                        <small id="locationHintDisplay" class="text-muted">
+                                            @if(old('village') || old('subdistrict'))
+                                                Wilayah tersimpan dari titik pin peta.
+                                            @else
+                                                Gunakan tombol "Lokasi Saat Ini" atau tentukan pin pada peta.
+                                            @endif
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="mb-0">
-                                <label for="address_detail" class="form-label small fw-semibold">Detail Patokan Lokasi <span class="text-danger">*</span></label>
-                                <textarea name="address_detail" 
-                                          id="address_detail" 
-                                          rows="2" 
-                                          class="form-control @error('address_detail') is-invalid @enderror" 
-                                          placeholder="Contoh: Bahu jalan sebelah timur jembatan rel KA, 50 meter di belakang Pasar Seng" 
-                                          required>{{ old('address_detail') }}</textarea>
-                                @error('address_detail')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            @error('latitude')
+                                <div class="text-danger small mt-2"><i class="bi bi-exclamation-circle me-1"></i>{{ $message }}</div>
+                            @enderror
+                            @error('subdistrict')
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ $message }}</div>
+                            @enderror
                         </div>
 
-                        <!-- Bukti Foto dan Deskripsi -->
+                        <!-- Foto Bukti & Deskripsi (Disatukan dengan Patokan Lokasi) -->
                         <div class="card bg-light border-0 p-3 mb-4">
-                            <h6 class="fw-bold text-dark mb-3"><i class="bi bi-camera me-2"></i>Foto Bukti & Kondisi Sampah</h6>
+                            <h6 class="fw-bold text-dark mb-3"><i class="bi bi-camera me-2"></i>Foto Bukti & Keterangan</h6>
                             
                             <div class="mb-3">
                                 <label for="photo" class="form-label small fw-semibold">Unggah Foto Sampah Liar <span class="text-danger">*</span></label>
@@ -131,13 +170,14 @@
                             </div>
 
                             <div class="mb-0">
-                                <label for="description" class="form-label small fw-semibold">Keterangan Kondisi Sampah <span class="text-danger">*</span></label>
+                                <label for="description" class="form-label small fw-semibold">Deskripsi & Patokan Lokasi <span class="text-danger">*</span></label>
                                 <textarea name="description" 
                                           id="description" 
                                           rows="3" 
                                           class="form-control @error('description') is-invalid @enderror" 
-                                          placeholder="Jelaskan kondisi tumpukan (bau, jenis sampah plastik/limbah, dampak bagi warga sekitar)" 
+                                          placeholder="Jelaskan patokan lokasi dan kondisi tumpukan sampah (contoh: Bahu jalan sebelah timur jembatan rel KA, 50 meter di belakang Pasar Seng. Kondisi tumpukan sampah plastik dan limbah rumah tangga berbau menyengat)" 
                                           required>{{ old('description') }}</textarea>
+                                <div class="form-text small">Sertakan patokan tempat agar tim verifikasi mudah menemukan lokasi sampah.</div>
                                 @error('description')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -159,3 +199,236 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // 17 Kecamatan resmi di Kabupaten Brebes
+    const BREBES_SUBDISTRICTS = [
+        'Banjarharjo', 'Bantarkawung', 'Brebes', 'Bulakamba', 'Bumiayu',
+        'Jatibarang', 'Kersana', 'Ketanggungan', 'Larangan', 'Losari',
+        'Paguyangan', 'Salem', 'Sirampog', 'Songgom', 'Tanjung',
+        'Tonjong', 'Wanasari'
+    ];
+
+    const DEFAULT_LAT = -6.8703;
+    const DEFAULT_LNG = 109.0436;
+    const DEFAULT_ZOOM = 12;
+
+    const latInput = document.getElementById('latitude');
+    const lngInput = document.getElementById('longitude');
+    const subdistrictInput = document.getElementById('subdistrict');
+    const villageInput = document.getElementById('village');
+
+    const locationNameDisplay = document.getElementById('locationNameDisplay');
+    const locationHintDisplay = document.getElementById('locationHintDisplay');
+    const geoAlert = document.getElementById('geoAlert');
+    const btnCurrentLocation = document.getElementById('btnCurrentLocation');
+
+    const initialLat = parseFloat(latInput.value) || DEFAULT_LAT;
+    const initialLng = parseFloat(lngInput.value) || DEFAULT_LNG;
+    const hasInitialCoord = Boolean(latInput.value && lngInput.value);
+
+    // Inisialisasi Peta Leaflet
+    const map = L.map('map', {
+        center: [initialLat, initialLng],
+        zoom: hasInitialCoord ? 16 : DEFAULT_ZOOM,
+        scrollWheelZoom: true
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }).addTo(map);
+
+    let marker = null;
+    let accuracyCircle = null;
+    let reverseGeocodeTimer = null;
+
+    // Fungsi pencocokan kecamatan Brebes dari teks nama tempat
+    function matchBrebesSubdistrict(addressObj) {
+        const candidates = [
+            addressObj.municipality,
+            addressObj.city_district,
+            addressObj.county,
+            addressObj.district,
+            addressObj.town,
+            addressObj.city
+        ].filter(Boolean);
+
+        for (const candidate of candidates) {
+            for (const sub of BREBES_SUBDISTRICTS) {
+                if (candidate.toLowerCase().includes(sub.toLowerCase())) {
+                    return sub;
+                }
+            }
+        }
+        return 'Brebes'; // default fallback
+    }
+
+    // Fungsi reverse geocoding otomatis dari koordinat ke nama Desa & Kecamatan
+    function reverseGeocode(lat, lng) {
+        locationNameDisplay.innerHTML = '<span class="spinner-border spinner-border-sm text-success me-1"></span> Mengidentifikasi wilayah...';
+        locationHintDisplay.textContent = 'Mendeteksi nama desa dan kecamatan dari titik peta...';
+
+        if (reverseGeocodeTimer) {
+            clearTimeout(reverseGeocodeTimer);
+        }
+
+        reverseGeocodeTimer = setTimeout(function () {
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+                .then(response => response.json())
+                .then(data => {
+                    const addr = data.address || {};
+                    const village = addr.village || addr.suburb || addr.neighbourhood || addr.quarter || addr.hamlet || addr.town || 'Desa Terdeteksi';
+                    const subdistrict = matchBrebesSubdistrict(addr);
+
+                    subdistrictInput.value = subdistrict;
+                    villageInput.value = village;
+
+                    locationNameDisplay.textContent = `${village}, Kec. ${subdistrict}`;
+                    locationHintDisplay.textContent = 'Wilayah otomatis terdeteksi berdasarkan titik pin di peta.';
+
+                    if (marker) {
+                        marker.bindPopup(`<strong>${village}</strong><br><small class="text-muted">Kecamatan ${subdistrict}</small>`).openPopup();
+                    }
+                })
+                .catch(() => {
+                    const fallbackSubdistrict = subdistrictInput.value || 'Brebes';
+                    const fallbackVillage = villageInput.value || 'Wilayah ' + fallbackSubdistrict;
+
+                    subdistrictInput.value = fallbackSubdistrict;
+                    villageInput.value = fallbackVillage;
+
+                    locationNameDisplay.textContent = `${fallbackVillage}, Kec. ${fallbackSubdistrict}`;
+                    locationHintDisplay.textContent = 'Titik lokasi tersimpan di peta.';
+                });
+        }, 300);
+    }
+
+    // Fungsi menetapkan posisi pin
+    function setLocation(lat, lng, accuracy = null, zoom = 16) {
+        latInput.value = Number(lat).toFixed(7);
+        lngInput.value = Number(lng).toFixed(7);
+
+        if (!marker) {
+            marker = L.marker([lat, lng], {
+                draggable: true,
+                title: 'Geser pin untuk memindahkan posisi sampah'
+            }).addTo(map);
+
+            marker.on('dragend', function () {
+                const pos = marker.getLatLng();
+                setLocation(pos.lat, pos.lng, null, null);
+            });
+        } else {
+            marker.setLatLng([lat, lng]);
+        }
+
+        if (accuracyCircle) {
+            map.removeLayer(accuracyCircle);
+            accuracyCircle = null;
+        }
+
+        if (accuracy) {
+            accuracyCircle = L.circle([lat, lng], {
+                radius: accuracy,
+                color: '#198754',
+                fillColor: '#198754',
+                fillOpacity: 0.15,
+                weight: 1
+            }).addTo(map);
+        }
+
+        if (zoom !== null) {
+            map.setView([lat, lng], zoom);
+        }
+
+        // Jalankan identifikasi desa & kecamatan otomatis
+        reverseGeocode(lat, lng);
+    }
+
+    // Jika ada koordinat awal (misal saat submit kembali)
+    if (hasInitialCoord) {
+        setLocation(initialLat, initialLng, null, 16);
+    }
+
+    // Event klik pada peta
+    map.on('click', function (e) {
+        setLocation(e.latlng.lat, e.latlng.lng, null, null);
+        showAlert('success', '<i class="bi bi-check-circle-fill me-1"></i> Titik lokasi sampah dipilih pada peta.');
+    });
+
+    function showAlert(type, htmlContent) {
+        geoAlert.className = `alert alert-${type} py-2 px-3 small d-flex align-items-center gap-2 mb-3`;
+        geoAlert.innerHTML = htmlContent;
+        geoAlert.classList.remove('d-none');
+    }
+
+    // Tombol "Lokasi Saat Ini"
+    btnCurrentLocation.addEventListener('click', function () {
+        if (!navigator.geolocation) {
+            showAlert('warning', '<i class="bi bi-exclamation-triangle-fill me-1"></i> Perangkat tidak mendukung GPS Geolocation. Silakan ketuk langsung pada peta.');
+            return;
+        }
+
+        const originalBtnHtml = btnCurrentLocation.innerHTML;
+        btnCurrentLocation.disabled = true;
+        btnCurrentLocation.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Mencari GPS...';
+        showAlert('info', '<i class="bi bi-arrow-repeat bi-spin me-1"></i> Sedang mendeteksi sinyal GPS lokasi Anda...');
+
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                btnCurrentLocation.disabled = false;
+                btnCurrentLocation.innerHTML = originalBtnHtml;
+
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const acc = Math.round(position.coords.accuracy);
+
+                setLocation(lat, lng, acc, 17);
+                showAlert('success', `<i class="bi bi-check-circle-fill me-1"></i> Lokasi GPS berhasil dideteksi (Akurasi: ±${acc} meter). Wilayah otomatis diperbarui!`);
+            },
+            function (error) {
+                btnCurrentLocation.disabled = false;
+                btnCurrentLocation.innerHTML = originalBtnHtml;
+
+                let errMsg = 'Gagal mendeteksi lokasi GPS.';
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        errMsg = 'Izin akses lokasi ditolak. Silakan aktifkan izin lokasi browser atau ketuk langsung pada peta.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errMsg = 'Informasi lokasi tidak tersedia. Silakan ketuk langsung pada peta.';
+                        break;
+                    case error.TIMEOUT:
+                        errMsg = 'Waktu pencarian GPS habis. Silakan coba lagi atau ketuk langsung pada peta.';
+                        break;
+                }
+                showAlert('warning', `<i class="bi bi-exclamation-triangle-fill me-1"></i> ${errMsg}`);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
+            }
+        );
+    });
+
+    // Validasi form saat submit
+    const reportForm = document.getElementById('reportForm');
+    reportForm.addEventListener('submit', function (e) {
+        if (!latInput.value || !lngInput.value) {
+            e.preventDefault();
+            showAlert('danger', '<i class="bi bi-x-circle-fill me-1"></i> <strong>Titik lokasi belum ditentukan!</strong> Silakan klik tombol <strong>"Lokasi Saat Ini"</strong> atau ketuk titik sampah pada peta.');
+            document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+
+    setTimeout(function () {
+        map.invalidateSize();
+    }, 400);
+});
+</script>
+@endpush

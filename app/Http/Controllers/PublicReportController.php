@@ -35,21 +35,55 @@ class PublicReportController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Normalisasi kecamatan otomatis dari reverse geocoding map
+        $rawSubdistrict = $request->input('subdistrict');
+        $matchedSubdistrict = null;
+        if ($rawSubdistrict) {
+            foreach ($this->subdistricts as $sub) {
+                if (stripos($rawSubdistrict, $sub) !== false) {
+                    $matchedSubdistrict = $sub;
+                    break;
+                }
+            }
+        }
+        $subdistrict = $matchedSubdistrict ?? ($rawSubdistrict ?: 'Brebes');
+
+        // Normalisasi desa/kelurahan otomatis
+        $village = trim((string) $request->input('village'));
+        if (empty($village)) {
+            $village = 'Wilayah ' . $subdistrict;
+        }
+
+        // Satukan kolom detail patokan dengan deskripsi
+        $description = trim((string) $request->input('description'));
+        $addressDetail = trim((string) $request->input('address_detail'));
+        if (empty($addressDetail)) {
+            $addressDetail = $description;
+        }
+
+        $request->merge([
+            'subdistrict' => $subdistrict,
+            'village' => $village,
+            'address_detail' => $addressDetail,
+        ]);
+
         $validated = $request->validate([
             'reporter_name' => ['required', 'string', 'max:100'],
             'reporter_phone' => ['required', 'string', 'max:30'],
-            'subdistrict' => ['required', 'string', 'in:' . implode(',', $this->subdistricts)],
+            'subdistrict' => ['required', 'string', 'max:100'],
             'village' => ['required', 'string', 'max:100'],
-            'address_detail' => ['required', 'string', 'max:500'],
-            'description' => ['required', 'string', 'max:1000'],
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'description' => ['required', 'string', 'max:1500'],
             'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'], // maks 5MB
         ], [
             'reporter_name.required' => 'Nama pelapor wajib diisi.',
-            'reporter_phone.required' => 'Nomor kontak / WhatsApp wajib diisi.',
-            'subdistrict.required' => 'Kecamatan wajib dipilih.',
-            'village.required' => 'Desa atau Kelurahan wajib diisi.',
-            'address_detail.required' => 'Patokan alamat lokasi wajib dijelaskan.',
-            'description.required' => 'Keterangan kondisi sampah wajib diisi.',
+            'reporter_phone.required' => 'Nomor HP wajib diisi.',
+            'latitude.required' => 'Titik lokasi sampah wajib ditentukan pada peta (klik tombol "Lokasi Saat Ini" atau tentukan pin pada peta).',
+            'latitude.numeric' => 'Format titik koordinat latitude tidak valid.',
+            'longitude.required' => 'Titik lokasi sampah wajib ditentukan pada peta (klik tombol "Lokasi Saat Ini" atau tentukan pin pada peta).',
+            'longitude.numeric' => 'Format titik koordinat longitude tidak valid.',
+            'description.required' => 'Deskripsi dan patokan lokasi wajib diisi.',
             'photo.required' => 'Foto bukti tumpukan sampah wajib diunggah.',
             'photo.image' => 'File yang diunggah harus berupa gambar.',
             'photo.max' => 'Ukuran foto maksimal 5 MB.',
@@ -67,7 +101,9 @@ class PublicReportController extends Controller
             'reporter_phone' => $validated['reporter_phone'],
             'subdistrict' => $validated['subdistrict'],
             'village' => $validated['village'],
-            'address_detail' => $validated['address_detail'],
+            'address_detail' => $validated['description'], // Disatukan dengan deskripsi & patokan lokasi
+            'latitude' => $validated['latitude'],
+            'longitude' => $validated['longitude'],
             'description' => $validated['description'],
             'photo_path' => $path,
             'status' => 'menunggu',

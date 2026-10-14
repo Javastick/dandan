@@ -2,6 +2,20 @@
 
 @section('title', 'Detail Titik Sampah - ' . $wastePoint->point_code)
 
+@if($wastePoint->latitude && $wastePoint->longitude)
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+    #wastePointMap {
+        height: 240px;
+        width: 100%;
+        border-radius: 0.5rem;
+        z-index: 1;
+    }
+</style>
+@endpush
+@endif
+
 @section('content')
 <div class="row mb-3">
     <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -47,6 +61,16 @@
                     <dt class="col-sm-3 text-muted">Patokan Lokasi</dt>
                     <dd class="col-sm-9">{{ $wastePoint->address_detail }}</dd>
 
+                    @if($wastePoint->latitude && $wastePoint->longitude)
+                        <dt class="col-sm-3 text-muted">Koordinat Titik</dt>
+                        <dd class="col-sm-9 font-monospace">
+                            <a href="https://www.google.com/maps?q={{ $wastePoint->latitude }},{{ $wastePoint->longitude }}" target="_blank" class="text-decoration-none">
+                                <i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ $wastePoint->latitude }}, {{ $wastePoint->longitude }}
+                                <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+                            </a>
+                        </dd>
+                    @endif
+
                     <dt class="col-sm-3 text-muted">Total Aduan Warga</dt>
                     <dd class="col-sm-9"><span class="badge bg-light text-dark border">{{ $wastePoint->reports_count }} Laporan</span></dd>
 
@@ -61,6 +85,13 @@
                     <dt class="col-sm-3 text-muted">Waktu Dihitung</dt>
                     <dd class="col-sm-9 text-muted">{{ $wastePoint->calculated_at ? $wastePoint->calculated_at->format('d M Y, H:i:s') : 'Belum dihitung' }}</dd>
                 </dl>
+
+                @if($wastePoint->latitude && $wastePoint->longitude)
+                    <div class="mt-3">
+                        <label class="form-label small fw-semibold text-muted mb-1"><i class="bi bi-map me-1 text-success"></i>Peta Lokasi Titik Sampah</label>
+                        <div id="wastePointMap" class="shadow-sm border"></div>
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -191,3 +222,26 @@
     </div>
 </div>
 @endsection
+
+@if($wastePoint->latitude && $wastePoint->longitude)
+@push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const lat = {{ $wastePoint->latitude }};
+    const lng = {{ $wastePoint->longitude }};
+    
+    const map = L.map('wastePointMap').setView([lat, lng], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
+        maxZoom: 19
+    }).addTo(map);
+
+    L.marker([lat, lng])
+        .addTo(map)
+        .bindPopup('<strong>{{ $wastePoint->point_code }}</strong><br>{{ $wastePoint->name }}<br><small>{{ $wastePoint->village }}, Kec. {{ $wastePoint->subdistrict }}</small>')
+        .openPopup();
+});
+</script>
+@endpush
+@endif

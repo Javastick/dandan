@@ -83,6 +83,8 @@ class ReportVerificationController extends Controller
                 'subdistrict' => $report->subdistrict,
                 'village' => $report->village,
                 'address_detail' => $report->address_detail,
+                'latitude' => $report->latitude,
+                'longitude' => $report->longitude,
                 'status' => 'terverifikasi',
                 'total_score' => 0.0,
             ]);

@@ -130,6 +130,16 @@
                                         <dt class="col-4 text-muted">Patokan</dt>
                                         <dd class="col-8">{{ $report->address_detail }}</dd>
 
+                                        @if($report->latitude && $report->longitude)
+                                            <dt class="col-4 text-muted">Koordinat</dt>
+                                            <dd class="col-8">
+                                                <a href="https://www.google.com/maps?q={{ $report->latitude }},{{ $report->longitude }}" target="_blank" class="text-decoration-none font-monospace small">
+                                                    <i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ $report->latitude }}, {{ $report->longitude }}
+                                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                                </a>
+                                            </dd>
+                                        @endif
+
                                         <dt class="col-4 text-muted">Keterangan</dt>
                                         <dd class="col-8">{{ $report->description }}</dd>
                                     </dl>
