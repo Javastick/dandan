@@ -60,7 +60,7 @@ class AhpPriorityController extends Controller
     }
 
     /**
-     * Tampilkan tabel urutan ranking prioritas penanganan sampah (AHP-WSM).
+     * Tampilkan tabel urutan ranking prioritas penanganan sampah (Metode AHP).
      */
     public function rankings(AhpService $ahpService): View
     {

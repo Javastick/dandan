@@ -43,7 +43,7 @@ class ReportVerificationController extends Controller
     /**
      * Tampilkan detail laporan dan opsi verifikasi.
      */
-    public function show(int $id): View
+    public function show(int $id, \App\Services\SpatialDistanceService $spatialService): View
     {
         $report = Report::with(['wastePoint', 'verifiedByUser'])->findOrFail($id);
 
@@ -55,7 +55,13 @@ class ReportVerificationController extends Controller
 
         $criteria = Criterion::where('is_active', true)->orderBy('code')->get();
 
-        return view('admin.reports.show', compact('report', 'existingWastePoints', 'criteria'));
+        // Analisis spasial otomatis untuk C2 (Pemukiman) dan C3 (Sungai)
+        $spatialAnalysis = null;
+        if ($report->latitude && $report->longitude) {
+            $spatialAnalysis = $spatialService->analyzeLocation((float) $report->latitude, (float) $report->longitude);
+        }
+
+        return view('admin.reports.show', compact('report', 'existingWastePoints', 'criteria', 'spatialAnalysis'));
     }
 
     /**
@@ -70,9 +76,9 @@ class ReportVerificationController extends Controller
             $validated = $request->validate([
                 'point_name' => ['required', 'string', 'max:150'],
                 'c1_volume' => ['required', 'integer', 'between:1,5'],
-                'c2_impact' => ['required', 'integer', 'between:1,5'],
-                'c3_frequency' => ['required', 'integer', 'between:1,5'],
-                'c4_duration' => ['required', 'integer', 'between:1,5'],
+                'c2_settlement' => ['required', 'integer', 'between:1,5'],
+                'c3_river' => ['required', 'integer', 'between:1,5'],
+                'c4_frequency' => ['required', 'integer', 'between:1,5'],
             ]);
 
             // Buat entitas fisik titik sampah baru
@@ -102,9 +108,9 @@ class ReportVerificationController extends Controller
 
             $ratings = [
                 'C1' => $validated['c1_volume'],
-                'C2' => $validated['c2_impact'],
-                'C3' => $validated['c3_frequency'],
-                'C4' => $validated['c4_duration'],
+                'C2' => $validated['c2_settlement'],
+                'C3' => $validated['c3_river'],
+                'C4' => $validated['c4_frequency'],
             ];
 
             foreach ($ratings as $code => $val) {
@@ -144,19 +150,19 @@ class ReportVerificationController extends Controller
                 'verified_by' => auth()->id(),
             ]);
 
-            // Perbarui kriteria C3 (Frekuensi) otomatis jika ada
-            $c3 = Criterion::where('code', 'C3')->first();
-            if ($c3) {
+            // Perbarui kriteria C4 (Frekuensi Laporan Masyarakat) otomatis jika ada
+            $c4 = Criterion::where('code', 'C4')->first();
+            if ($c4) {
                 $countReports = Report::where('waste_point_id', $wastePoint->id)->where('status', 'diterima')->count();
-                $c3Value = min(5, max(1, $countReports));
+                $c4Value = min(5, max(1, $countReports));
                 PointAssessment::updateOrCreate(
                     [
                         'waste_point_id' => $wastePoint->id,
-                        'criterion_id' => $c3->id,
+                        'criterion_id' => $c4->id,
                     ],
                     [
-                        'raw_value' => $c3Value,
-                        'normalized_score' => round($c3Value / 5.0, 4),
+                        'raw_value' => $c4Value,
+                        'normalized_score' => round($c4Value / 5.0, 4),
                         'assessed_by' => auth()->id(),
                     ]
                 );

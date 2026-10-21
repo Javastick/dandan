@@ -19,5 +19,15 @@ class AdminUserSeeder extends Seeder
                 'password' => Hash::make('admin123'),
             ]
         );
+
+        User::updateOrCreate(
+            ['email' => 'petugas@dandan.test'],
+            [
+                'name' => 'Petugas Lapangan Kebersihan',
+                'phone' => '089876543210',
+                'role' => 'petugas',
+                'password' => Hash::make('petugas123'),
+            ]
+        );
     }
 }

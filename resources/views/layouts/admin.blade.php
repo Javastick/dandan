@@ -102,7 +102,7 @@
     <!-- Footer Admin -->
     <footer class="bg-white border-top py-3 mt-auto">
         <div class="container-fluid px-lg-4 text-center text-muted small">
-            &copy; {{ date('Y') }} Sistem Penentuan Prioritas Sampah Liar (AHP-WSM) &bull; Diskusi & Bimbingan Skripsi
+            &copy; {{ date('Y') }} Sistem Penentuan Prioritas Sampah Liar (AHP) &bull; Diskusi & Bimbingan Skripsi
         </div>
     </footer>
 

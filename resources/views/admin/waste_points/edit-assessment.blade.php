@@ -25,9 +25,19 @@
             </div>
 
             <div class="card-body p-4">
+                @if($spatialAnalysis)
+                    <div class="alert alert-success py-2 px-3 small mb-4">
+                        <div class="fw-semibold text-success mb-1"><i class="bi bi-compass-fill me-1"></i>Rekomendasi Analisis Geospasial (SIG Brebes):</div>
+                        <ul class="mb-0 ps-3">
+                            <li><strong>Jarak ke Pemukiman:</strong> {{ $spatialAnalysis['settlement']['formatted'] }} (Terdekat: {{ $spatialAnalysis['settlement']['nearest_name'] }}) &rarr; <span class="badge bg-success">Rekomendasi Skala: {{ $spatialAnalysis['settlement']['scale'] }}</span></li>
+                            <li><strong>Jarak ke Sungai:</strong> {{ $spatialAnalysis['river']['formatted'] }} (Terdekat: {{ $spatialAnalysis['river']['nearest_name'] }}) &rarr; <span class="badge bg-success">Rekomendasi Skala: {{ $spatialAnalysis['river']['scale'] }}</span></li>
+                        </ul>
+                    </div>
+                @endif
+
                 <div class="alert alert-warning py-2 px-3 small mb-4">
                     <i class="bi bi-info-circle-fill me-1"></i> 
-                    <strong>Catatan Demonstrasi Akademik:</strong> Penilaian skala 1–5 di bawah ini merupakan instrumen operasional sementara. Setelah disimpan, sistem akan menormalisasi nilai ($R_{ij} = x_{ij} / 5$) dan mengalikannya dengan bobot kriteria AHP untuk memperbarui skor prioritas secara otomatis.
+                    <strong>Catatan Akademik:</strong> Penilaian skala 1–5 di bawah ini merupakan instrumen operasional penentuan prioritas. Setelah disimpan, sistem akan menormalisasi nilai ($S_{ij} = x_{ij} / 5$) dan menghitung skor akhir preferensi AHP ($V_i = \sum w_j \cdot S_{ij}$) secara otomatis.
                 </div>
 
                 <form action="{{ route('admin.waste_points.update_assessment', $wastePoint->id) }}" method="POST">

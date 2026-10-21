@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WastePoint extends Model
@@ -19,6 +20,10 @@ class WastePoint extends Model
         'latitude',
         'longitude',
         'status',
+        'assigned_to',
+        'resolution_photo',
+        'handling_notes',
+        'handled_at',
         'total_score',
         'rank',
         'weights_snapshot',
@@ -32,9 +37,15 @@ class WastePoint extends Model
             'rank' => 'integer',
             'weights_snapshot' => 'array',
             'calculated_at' => 'datetime',
+            'handled_at' => 'datetime',
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
         ];
+    }
+
+    public function assignedOfficer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
     }
 
     public function reports(): HasMany

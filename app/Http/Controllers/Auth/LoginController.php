@@ -21,6 +21,9 @@ class LoginController extends Controller
             if (Auth::user()->isAdmin()) {
                 return redirect()->route('admin.dashboard');
             }
+            if (Auth::user()->isOfficer()) {
+                return redirect()->route('officer.dashboard');
+            }
             return redirect('/');
         }
 
@@ -52,18 +55,23 @@ class LoginController extends Controller
             RateLimiter::clear($throttleKey);
             $request->session()->regenerate();
 
-            if (!Auth::user()->isAdmin()) {
-                Auth::logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-
-                return back()->withErrors([
-                    'email' => 'Akun Anda tidak memiliki hak akses administrator.',
-                ]);
+            if (Auth::user()->isAdmin()) {
+                return redirect()->intended(route('admin.dashboard'))
+                    ->with('success', 'Selamat datang kembali, Admin ' . Auth::user()->name . '!');
             }
 
-            return redirect()->intended(route('admin.dashboard'))
-                ->with('success', 'Selamat datang kembali, ' . Auth::user()->name . '!');
+            if (Auth::user()->isOfficer()) {
+                return redirect()->intended(route('officer.dashboard'))
+                    ->with('success', 'Selamat datang, Petugas ' . Auth::user()->name . '!');
+            }
+
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()->withErrors([
+                'email' => 'Akun Anda tidak memiliki hak akses sistem.',
+            ]);
         }
 
         RateLimiter::hit($throttleKey, 60);

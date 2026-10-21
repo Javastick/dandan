@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes - Sistem Pelaporan & Prioritas Sampah Liar (AHP-WSM) Brebes
+| Web Routes - Sistem Pelaporan & Prioritas Sampah Liar (Metode AHP) Brebes
 |--------------------------------------------------------------------------
 */
 
@@ -51,3 +51,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/ahp/rankings', [AhpPriorityController::class, 'rankings'])->name('ahp.rankings');
     Route::post('/ahp/recalculate', [AhpPriorityController::class, 'recalculate'])->name('ahp.recalculate');
 });
+
+// Area Terproteksi Petugas Lapangan DLH
+Route::middleware(['auth', 'officer'])->prefix('officer')->name('officer.')->group(function () {
+    Route::get('/dashboard', [\App\Http\Controllers\Officer\TaskController::class, 'dashboard'])->name('dashboard');
+    Route::get('/tasks/{id}', [\App\Http\Controllers\Officer\TaskController::class, 'show'])->name('tasks.show');
+    Route::post('/tasks/{id}', [\App\Http\Controllers\Officer\TaskController::class, 'updateProgress'])->name('tasks.update');
+});
+

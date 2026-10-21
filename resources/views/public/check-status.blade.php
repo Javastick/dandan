@@ -102,9 +102,15 @@
                                                 <span class="badge bg-success">Tuntas Ditangani / Bersih</span>
                                             @endif
                                         </div>
+                                        @if($report->wastePoint->assignedOfficer)
+                                            <div class="mt-1">
+                                                <strong>Petugas Penanganan:</strong> 
+                                                <span class="badge bg-info text-dark"><i class="bi bi-person-badge me-1"></i>{{ $report->wastePoint->assignedOfficer->name }}</span>
+                                            </div>
+                                        @endif
                                         @if($report->wastePoint->rank)
                                             <div class="mt-1">
-                                                <strong>Peringkat Prioritas AHP-WSM:</strong> 
+                                                <strong>Peringkat Prioritas AHP:</strong> 
                                                 <span class="badge bg-dark">Peringkat #{{ $report->wastePoint->rank }}</span>
                                                 (Skor: {{ number_format($report->wastePoint->total_score, 4) }})
                                             </div>
@@ -147,12 +153,33 @@
 
                                 <div class="col-md-6">
                                     <h6 class="fw-bold border-bottom pb-2">Foto Bukti Aduan Warga</h6>
-                                    <div class="border rounded p-1 text-center bg-light mb-3">
-                                        <img src="{{ asset('storage/' . $report->photo_path) }}" 
-                                             alt="Foto Bukti Sampah" 
-                                             class="img-fluid rounded" 
-                                             style="max-height: 220px; object-fit: cover;">
-                                    </div>
+                                    @php
+                                        $allPhotos = $report->all_photos;
+                                    @endphp
+                                    @if(count($allPhotos) > 1)
+                                        <div class="row g-2 mb-3">
+                                            @foreach($allPhotos as $idx => $p)
+                                                <div class="col-4">
+                                                    <a href="{{ asset('storage/' . $p) }}" target="_blank" class="d-block border rounded p-1 bg-light text-center h-100 shadow-sm text-decoration-none">
+                                                        <img src="{{ asset('storage/' . $p) }}" 
+                                                             alt="Bukti Aduan {{ $idx + 1 }}" 
+                                                             class="img-fluid rounded" 
+                                                             style="height: 100px; width: 100%; object-fit: cover;">
+                                                        <small class="text-muted d-block mt-1" style="font-size: 10px;">Foto {{ $idx + 1 }}</small>
+                                                    </a>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="border rounded p-1 text-center bg-light mb-3">
+                                            <a href="{{ asset('storage/' . ($allPhotos[0] ?? $report->photo_path)) }}" target="_blank">
+                                                <img src="{{ asset('storage/' . ($allPhotos[0] ?? $report->photo_path)) }}" 
+                                                     alt="Foto Bukti Sampah" 
+                                                     class="img-fluid rounded" 
+                                                     style="max-height: 220px; object-fit: cover;">
+                                            </a>
+                                        </div>
+                                    @endif
 
                                     @if($report->resolution_photo || ($report->wastePoint && $report->wastePoint->status === 'selesai'))
                                         <h6 class="fw-bold border-bottom pb-2 text-success"><i class="bi bi-check2-circle me-1"></i> Foto Bukti Penyelesaian</h6>

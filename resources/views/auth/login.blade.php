@@ -66,9 +66,17 @@
                     </form>
 
                     <div class="card bg-light border-0 mt-4 p-3 small text-muted">
-                        <div class="fw-semibold text-dark mb-1"><i class="bi bi-info-circle me-1"></i> Akun Uji Coba:</div>
-                        <div>Email: <code>admin@dandan.test</code></div>
-                        <div>Password: <code>admin123</code></div>
+                        <div class="fw-semibold text-dark mb-2"><i class="bi bi-info-circle me-1"></i> Akun Pengujian:</div>
+                        <div class="mb-2 pb-2 border-bottom">
+                            <span class="badge bg-dark me-1">ADMINISTRATOR</span>
+                            <div>Email: <code>admin@dandan.test</code></div>
+                            <div>Password: <code>admin123</code></div>
+                        </div>
+                        <div>
+                            <span class="badge bg-success me-1">PETUGAS LAPANGAN</span>
+                            <div>Email: <code>petugas@dandan.test</code></div>
+                            <div>Password: <code>petugas123</code></div>
+                        </div>
                     </div>
                 </div>
             </div>

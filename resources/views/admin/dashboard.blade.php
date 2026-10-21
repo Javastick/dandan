@@ -11,7 +11,7 @@
                 <div>
                     <h4 class="fw-bold mb-1">Selamat Datang, {{ auth()->user()->name }} 👋</h4>
                     <p class="mb-0 opacity-75 small">
-                        Sistem Prioritas Penanganan Sampah Liar — Metode AHP-WSM | Kabupaten Brebes
+                        Sistem Prioritas Penanganan Sampah Liar — Metode AHP | Kabupaten Brebes
                         <span class="badge bg-warning text-dark ms-2">DATA DEMO / PROTOTIPE</span>
                     </p>
                 </div>
@@ -91,7 +91,7 @@
     <div class="col-lg-7">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h6 class="fw-bold mb-0"><i class="bi bi-trophy-fill text-warning me-2"></i>5 Titik Prioritas Utama (AHP-WSM)</h6>
+                <h6 class="fw-bold mb-0"><i class="bi bi-trophy-fill text-warning me-2"></i>5 Titik Prioritas Utama (AHP)</h6>
                 <a href="{{ route('admin.ahp.rankings') }}" class="btn btn-sm btn-outline-success">Lihat Semua</a>
             </div>
             <div class="card-body p-0">
@@ -117,7 +117,7 @@
                             <div class="fw-bold font-monospace {{ $wp->total_score >= 0.7 ? 'text-danger' : 'text-primary' }}">
                                 {{ number_format($wp->total_score, 4) }}
                             </div>
-                            <div style="font-size: 10px;" class="text-muted">Skor WSM</div>
+                            <div style="font-size: 10px;" class="text-muted">Skor AHP</div>
                         </div>
                         <a href="{{ route('admin.waste_points.show', $wp->id) }}" class="btn btn-sm btn-outline-secondary">
                             <i class="bi bi-eye"></i>

@@ -15,7 +15,7 @@
                     Laporkan Sampah Liar di<br>Kabupaten Brebes
                 </h1>
                 <p class="lead opacity-90 mb-4">
-                    Bantu DLH Brebes menentukan prioritas penanganan menggunakan metode AHP-WSM. Setiap laporan Anda membantu mengalokasikan armada kebersihan lebih efisien.
+                    Bantu DLH Brebes menentukan prioritas penanganan sampah liar menggunakan metode AHP (Analytic Hierarchy Process). Setiap laporan Anda membantu mengalokasikan armada kebersihan secara objektif dan efisien.
                 </p>
                 <div class="d-flex gap-3 flex-wrap">
                     <a href="{{ route('report.create') }}" class="btn btn-warning btn-lg fw-bold px-4 shadow">
@@ -64,7 +64,7 @@
                     <div class="p-3">
                         <div class="bg-primary text-white rounded-circle d-inline-flex p-3 mb-3"><i class="bi bi-calculator fs-3"></i></div>
                         <h5 class="fw-bold">3. Prioritas AHP</h5>
-                        <p class="text-muted small mb-0">Sistem menghitung skor prioritas menggunakan metode AHP (bobot kriteria) + WSM (skor alternatif).</p>
+                        <p class="text-muted small mb-0">Sistem menghitung skor prioritas menggunakan metode Analytic Hierarchy Process (AHP) berdasarkan bobot kriteria ilmiah.</p>
                     </div>
                 </div>
             </div>

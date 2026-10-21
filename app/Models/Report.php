@@ -22,6 +22,7 @@ class Report extends Model
         'longitude',
         'description',
         'photo_path',
+        'photos',
         'resolution_photo',
         'status',
         'rejection_reason',
@@ -32,10 +33,23 @@ class Report extends Model
     protected function casts(): array
     {
         return [
+            'photos' => 'array',
             'verified_at' => 'datetime',
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
         ];
+    }
+
+    /**
+     * Dapatkan semua foto laporan (termasuk legacy photo_path)
+     */
+    public function getAllPhotosAttribute(): array
+    {
+        if (!empty($this->photos) && is_array($this->photos)) {
+            return $this->photos;
+        }
+
+        return $this->photo_path ? [$this->photo_path] : [];
     }
 
     public function wastePoint(): BelongsTo

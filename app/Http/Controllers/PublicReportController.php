@@ -75,7 +75,8 @@ class PublicReportController extends Controller
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'description' => ['required', 'string', 'max:1500'],
-            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'], // maks 5MB
+            'photos' => ['required', 'array', 'min:1', 'max:3'],
+            'photos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'], // maks 5MB per gambar
         ], [
             'reporter_name.required' => 'Nama pelapor wajib diisi.',
             'reporter_phone.required' => 'Nomor HP wajib diisi.',
@@ -84,13 +85,21 @@ class PublicReportController extends Controller
             'longitude.required' => 'Titik lokasi sampah wajib ditentukan pada peta (klik tombol "Lokasi Saat Ini" atau tentukan pin pada peta).',
             'longitude.numeric' => 'Format titik koordinat longitude tidak valid.',
             'description.required' => 'Deskripsi dan patokan lokasi wajib diisi.',
-            'photo.required' => 'Foto bukti tumpukan sampah wajib diunggah.',
-            'photo.image' => 'File yang diunggah harus berupa gambar.',
-            'photo.max' => 'Ukuran foto maksimal 5 MB.',
+            'photos.required' => 'Minimal 1 foto bukti tumpukan sampah wajib diunggah.',
+            'photos.min' => 'Minimal 1 foto bukti tumpukan sampah wajib diunggah.',
+            'photos.max' => 'Maksimal 3 foto yang dapat diunggah.',
+            'photos.*.image' => 'File yang diunggah harus berupa gambar.',
+            'photos.*.mimes' => 'Format gambar harus berupa JPG, JPEG, PNG, atau WEBP.',
+            'photos.*.max' => 'Ukuran masing-masing foto maksimal 5 MB.',
         ]);
 
-        // Simpan file foto ke storage public/reports
-        $path = $request->file('photo')->store('reports', 'public');
+        // Simpan file foto-foto ke storage public/reports
+        $storedPhotos = [];
+        if ($request->hasFile('photos')) {
+            foreach ($request->file('photos') as $photoFile) {
+                $storedPhotos[] = $photoFile->store('reports', 'public');
+            }
+        }
 
         // Generate kode tiket unik: LPR-YYMMDD-XXXX
         $ticketCode = 'LPR-' . date('ymd') . '-' . strtoupper(Str::random(5));
@@ -105,7 +114,8 @@ class PublicReportController extends Controller
             'latitude' => $validated['latitude'],
             'longitude' => $validated['longitude'],
             'description' => $validated['description'],
-            'photo_path' => $path,
+            'photo_path' => $storedPhotos[0] ?? '',
+            'photos' => $storedPhotos,
             'status' => 'menunggu',
         ]);
 

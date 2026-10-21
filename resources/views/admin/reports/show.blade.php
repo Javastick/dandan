@@ -40,12 +40,31 @@
                 @endif
             </div>
             <div class="card-body p-4">
-                <div class="border rounded p-2 text-center bg-light mb-4">
-                    <img src="{{ asset('storage/' . $report->photo_path) }}" 
-                         alt="Bukti Laporan" 
-                         class="img-fluid rounded shadow-sm" 
-                         style="max-height: 320px; object-fit: contain;">
-                </div>
+                @php
+                    $allPhotos = $report->all_photos;
+                @endphp
+                @if(count($allPhotos) > 1)
+                    <div class="row g-2 mb-4">
+                        @foreach($allPhotos as $idx => $p)
+                            <div class="col-4">
+                                <a href="{{ asset('storage/' . $p) }}" target="_blank" class="d-block border rounded p-1 bg-light text-center h-100 shadow-sm text-decoration-none">
+                                    <img src="{{ asset('storage/' . $p) }}" 
+                                         alt="Bukti Laporan {{ $idx + 1 }}" 
+                                         class="img-fluid rounded" 
+                                         style="height: 120px; width: 100%; object-fit: cover;">
+                                    <small class="text-muted d-block mt-1" style="font-size: 11px;">Foto {{ $idx + 1 }} <i class="bi bi-box-arrow-up-right ms-1"></i></small>
+                                </a>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="border rounded p-2 text-center bg-light mb-4">
+                        <img src="{{ asset('storage/' . ($allPhotos[0] ?? $report->photo_path)) }}" 
+                             alt="Bukti Laporan" 
+                             class="img-fluid rounded shadow-sm" 
+                             style="max-height: 320px; object-fit: contain;">
+                    </div>
+                @endif
 
                 <dl class="row small mb-0">
                     <dt class="col-sm-4 text-muted">Nomor Tiket</dt>
@@ -139,51 +158,80 @@
                                 </div>
 
                                 <div class="card bg-light border-0 p-3 mb-3">
-                                    <h6 class="fw-bold small mb-2"><i class="bi bi-sliders me-1"></i>Penilaian Kriteria Awal (Skala 1 - 5)</h6>
-                                    <p class="text-muted small mb-3">Tentukan penilaian awal berdasarkan foto dan kondisi lapangan.</p>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="fw-bold small mb-0"><i class="bi bi-sliders me-1"></i>Penilaian Kriteria Awal (Skala 1 - 5)</h6>
+                                        <span class="badge bg-success-subtle text-success border border-success small"><i class="bi bi-geo-alt-fill me-1"></i>SIG Auto-Detect</span>
+                                    </div>
+                                    <p class="text-muted small mb-3">Nilai jarak ke pemukiman dan sungai di bawah ini <strong>terhitung otomatis oleh fitur SIG</strong> berdasarkan data geospasial Brebes.</p>
+
+                                    @if($spatialAnalysis)
+                                        <div class="alert alert-success py-2 px-3 small mb-3">
+                                            <div class="fw-semibold text-success mb-1"><i class="bi bi-compass-fill me-1"></i>Hasil Analisis Spasial Titik Ini:</div>
+                                            <ul class="mb-0 ps-3">
+                                                <li><strong>Jarak ke Pemukiman:</strong> {{ $spatialAnalysis['settlement']['formatted'] }} (Terdekat: {{ $spatialAnalysis['settlement']['nearest_name'] }}) &rarr; <span class="badge bg-success">Skala Otomatis: {{ $spatialAnalysis['settlement']['scale'] }}</span></li>
+                                                <li><strong>Jarak ke Sungai:</strong> {{ $spatialAnalysis['river']['formatted'] }} (Terdekat: {{ $spatialAnalysis['river']['nearest_name'] }}) &rarr; <span class="badge bg-success">Skala Otomatis: {{ $spatialAnalysis['river']['scale'] }}</span></li>
+                                            </ul>
+                                        </div>
+                                    @endif
 
                                     <div class="row g-2">
                                         <div class="col-6 mb-2">
                                             <label class="form-label small fw-semibold">C1: Volume Sampah</label>
                                             <select name="c1_volume" class="form-select form-select-sm" required>
-                                                <option value="1">1 - Sangat Kecil (< 1 m³)</option>
+                                                <option value="1">1 - Sangat Kecil (&lt; 1 m³)</option>
                                                 <option value="2">2 - Kecil (1 - 3 m³)</option>
                                                 <option value="3" selected>3 - Sedang (3 - 5 m³)</option>
                                                 <option value="4">4 - Besar (5 - 10 m³)</option>
-                                                <option value="5">5 - Sangat Besar (> 10 m³)</option>
+                                                <option value="5">5 - Sangat Besar (&gt; 10 m³)</option>
                                             </select>
                                         </div>
 
                                         <div class="col-6 mb-2">
-                                            <label class="form-label small fw-semibold">C2: Dampak Lingkungan</label>
-                                            <select name="c2_impact" class="form-select form-select-sm" required>
-                                                <option value="1">1 - Rendah (Lahan kosong)</option>
-                                                <option value="2">2 - Ringan (Dekat sawah)</option>
-                                                <option value="3" selected>3 - Sedang (Dekat jalan/warung)</option>
-                                                <option value="4">4 - Tinggi (Saluran irigasi)</option>
-                                                <option value="5">5 - Kritis (Dekat sekolah/faskes)</option>
+                                            <label class="form-label small fw-semibold">
+                                                C2: Jarak Pemukiman
+                                                @if($spatialAnalysis)
+                                                    <span class="text-success" title="Otomatis dari SIG">({{ $spatialAnalysis['settlement']['formatted'] }})</span>
+                                                @endif
+                                            </label>
+                                            @php
+                                                $autoSettlementScale = $spatialAnalysis['settlement']['scale'] ?? 3;
+                                            @endphp
+                                            <select name="c2_settlement" class="form-select form-select-sm border-success" required>
+                                                <option value="1" {{ $autoSettlementScale == 1 ? 'selected' : '' }}>1 - Sangat Jauh (&gt; 500 m)</option>
+                                                <option value="2" {{ $autoSettlementScale == 2 ? 'selected' : '' }}>2 - Jauh (250 - 500 m)</option>
+                                                <option value="3" {{ $autoSettlementScale == 3 ? 'selected' : '' }}>3 - Sedang (100 - 250 m)</option>
+                                                <option value="4" {{ $autoSettlementScale == 4 ? 'selected' : '' }}>4 - Dekat (50 - 100 m)</option>
+                                                <option value="5" {{ $autoSettlementScale == 5 ? 'selected' : '' }}>5 - Sangat Dekat (&lt; 50 m / pemukiman)</option>
                                             </select>
                                         </div>
 
                                         <div class="col-6">
-                                            <label class="form-label small fw-semibold">C3: Frekuensi Laporan</label>
-                                            <select name="c3_frequency" class="form-select form-select-sm" required>
+                                            <label class="form-label small fw-semibold">
+                                                C3: Jarak ke Sungai
+                                                @if($spatialAnalysis)
+                                                    <span class="text-success" title="Otomatis dari SIG">({{ $spatialAnalysis['river']['formatted'] }})</span>
+                                                @endif
+                                            </label>
+                                            @php
+                                                $autoRiverScale = $spatialAnalysis['river']['scale'] ?? 3;
+                                            @endphp
+                                            <select name="c3_river" class="form-select form-select-sm border-success" required>
+                                                <option value="1" {{ $autoRiverScale == 1 ? 'selected' : '' }}>1 - Sangat Jauh (&gt; 500 m)</option>
+                                                <option value="2" {{ $autoRiverScale == 2 ? 'selected' : '' }}>2 - Jauh (250 - 500 m)</option>
+                                                <option value="3" {{ $autoRiverScale == 3 ? 'selected' : '' }}>3 - Sedang (100 - 250 m)</option>
+                                                <option value="4" {{ $autoRiverScale == 4 ? 'selected' : '' }}>4 - Dekat (50 - 100 m)</option>
+                                                <option value="5" {{ $autoRiverScale == 5 ? 'selected' : '' }}>5 - Sangat Dekat (&lt; 50 m / sempadan air)</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">C4: Frekuensi Aduan</label>
+                                            <select name="c4_frequency" class="form-select form-select-sm" required>
                                                 <option value="1" selected>1 - 1 Laporan</option>
                                                 <option value="2">2 - 2 Laporan</option>
                                                 <option value="3">3 - 3 Laporan</option>
                                                 <option value="4">4 - 4 Laporan</option>
-                                                <option value="5">5 - >= 5 Laporan</option>
-                                            </select>
-                                        </div>
-
-                                        <div class="col-6">
-                                            <label class="form-label small fw-semibold">C4: Lama Waktu</label>
-                                            <select name="c4_duration" class="form-select form-select-sm" required>
-                                                <option value="1" selected>1 - < 2 Hari</option>
-                                                <option value="2">2 - 2 s.d. 4 Hari</option>
-                                                <option value="3">3 - 5 s.d. 7 Hari</option>
-                                                <option value="4">4 - 8 s.d. 14 Hari</option>
-                                                <option value="5">5 - > 14 Hari</option>
+                                                <option value="5">5 - &gt;= 5 Laporan</option>
                                             </select>
                                         </div>
                                     </div>
@@ -315,10 +363,93 @@ document.addEventListener('DOMContentLoaded', function () {
         maxZoom: 19
     }).addTo(map);
 
-    L.marker([lat, lng])
+    const bounds = [[lat, lng]];
+
+    // Marker Titik Sampah (Merah)
+    const trashIcon = L.divIcon({
+        className: 'custom-pin-trash',
+        html: '<div style="background-color: #dc3545; color: white; border: 2px solid white; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"><i class="bi bi-trash-fill fs-6"></i></div>',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
+    });
+
+    L.marker([lat, lng], { icon: trashIcon })
         .addTo(map)
-        .bindPopup('<strong>Lokasi Aduan: {{ $report->ticket_code }}</strong><br><small>{{ $report->village }}, Kec. {{ $report->subdistrict }}</small>')
+        .bindPopup('<strong>Titik Sampah: {{ $report->ticket_code }}</strong><br><small>{{ $report->village }}, Kec. {{ $report->subdistrict }}</small>')
         .openPopup();
+
+    @if($spatialAnalysis)
+        const riverInfo = @json($spatialAnalysis['river']);
+        const settlementInfo = @json($spatialAnalysis['settlement']);
+
+        // 1. Tampilkan Sungai Terdekat (Garis & Marker Biru)
+        if (riverInfo.nearest_point) {
+            const riverLat = riverInfo.nearest_point[0];
+            const riverLng = riverInfo.nearest_point[1];
+            bounds.push([riverLat, riverLng]);
+
+            // Marker Titik Sungai Terdekat
+            const riverIcon = L.divIcon({
+                className: 'custom-pin-river',
+                html: '<div style="background-color: #0d6efd; color: white; border: 2px solid white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="bi bi-water fs-6"></i></div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            L.marker([riverLat, riverLng], { icon: riverIcon })
+                .addTo(map)
+                .bindPopup(`<strong>${riverInfo.nearest_name}</strong><br><small class="text-primary">${riverInfo.type}</small><br>Jarak ke sampah: <strong>${riverInfo.formatted}</strong>`);
+
+            // Garis Penghubung Sampah -> Sungai (Garis Putus-Putus Biru)
+            L.polyline([[lat, lng], [riverLat, riverLng]], {
+                color: '#0d6efd',
+                weight: 3,
+                dashArray: '5, 5',
+                opacity: 0.8
+            }).addTo(map).bindTooltip(`Jarak ke ${riverInfo.nearest_name}: ${riverInfo.formatted}`, { sticky: true });
+
+            // Jika ada garis alur sungai, gambar garis birunya
+            if (riverInfo.line_coordinates && riverInfo.line_coordinates.length > 1) {
+                const polylineCoords = riverInfo.line_coordinates.map(c => [c[1], c[0]]);
+                L.polyline(polylineCoords, {
+                    color: '#0dcaf0',
+                    weight: 4,
+                    opacity: 0.6
+                }).addTo(map).bindTooltip(`Aliran ${riverInfo.nearest_name}`);
+            }
+        }
+
+        // 2. Tampilkan Pemukiman Terdekat (Marker Oranye / Rumah)
+        if (settlementInfo.coordinates) {
+            const setLat = settlementInfo.coordinates[0];
+            const setLng = settlementInfo.coordinates[1];
+            bounds.push([setLat, setLng]);
+
+            const houseIcon = L.divIcon({
+                className: 'custom-pin-house',
+                html: '<div style="background-color: #fd7e14; color: white; border: 2px solid white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="bi bi-houses-fill fs-6"></i></div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            L.marker([setLat, setLng], { icon: houseIcon })
+                .addTo(map)
+                .bindPopup(`<strong>${settlementInfo.nearest_name}</strong><br><small class="text-muted">Kecamatan ${settlementInfo.subdistrict}</small><br>Jarak ke sampah: <strong>${settlementInfo.formatted}</strong>`);
+
+            // Garis Penghubung Sampah -> Pemukiman (Garis Putus-Putus Oranye)
+            L.polyline([[lat, lng], [setLat, setLng]], {
+                color: '#fd7e14',
+                weight: 3,
+                dashArray: '5, 5',
+                opacity: 0.8
+            }).addTo(map).bindTooltip(`Jarak ke Pemukiman: ${settlementInfo.formatted}`, { sticky: true });
+        }
+
+        // Sesuaikan zoom agar sampah, sungai, dan pemukiman semuanya terlihat
+        if (bounds.length > 1) {
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+        }
+    @endif
 });
 </script>
 @endpush

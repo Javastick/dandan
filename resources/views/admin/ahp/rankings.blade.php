@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Ranking Prioritas Penanganan Sampah - AHP-WSM')
+@section('title', 'Ranking Prioritas Penanganan Sampah - Metode AHP')
 
 @section('content')
 <div class="row mb-4">
@@ -10,8 +10,8 @@
                 <div>
                     <h4 class="fw-bold mb-1"><i class="bi bi-trophy text-warning me-2"></i>Daftar Prioritas Penanganan Sampah Liar</h4>
                     <p class="text-muted small mb-0">
-                        Peringkat dihasilkan menggunakan metode <strong>AHP</strong> (pembobotan kriteria) + <strong>WSM</strong> (penjumlahan terbobot).
-                        Skor lebih tinggi = prioritas penanganan lebih mendesak.
+                        Peringkat dihitung menggunakan metode <strong>AHP (Analytic Hierarchy Process)</strong> dengan pendekatan pengukuran absolut (*Rating Model*).
+                        Skor preferensi lebih tinggi = prioritas penanganan lebih mendesak.
                     </p>
                 </div>
                 <div class="d-flex gap-2">
@@ -63,7 +63,7 @@
                             @foreach($criteria as $c)
                                 <th class="text-center">{{ $c->code }}<br><span class="fw-normal opacity-75">(w={{ number_format($c->weight, 3) }})</span></th>
                             @endforeach
-                            <th class="text-center">Skor WSM</th>
+                            <th class="text-center">Skor Akhir AHP</th>
                             <th>Status</th>
                             <th class="text-end pe-3">Aksi</th>
                         </tr>
@@ -77,11 +77,11 @@
                                 <td class="ps-3 text-center">
                                     @if($wp->rank)
                                         @if($wp->rank === 1)
-                                            <span class="badge bg-danger fs-5">🥇 #1</span>
+                                            <span class="badge bg-danger fs-5">#1</span>
                                         @elseif($wp->rank === 2)
-                                            <span class="badge bg-warning text-dark fs-6">🥈 #2</span>
+                                            <span class="badge bg-warning text-dark fs-6">#2</span>
                                         @elseif($wp->rank === 3)
-                                            <span class="badge bg-secondary fs-6">🥉 #3</span>
+                                            <span class="badge bg-secondary fs-6">#3</span>
                                         @else
                                             <span class="badge bg-dark">#{{ $wp->rank }}</span>
                                         @endif
@@ -149,8 +149,8 @@
         </div>
         <div class="card-footer bg-light py-2 px-3 small text-muted">
             <i class="bi bi-info-circle me-1"></i>
-            <strong>Formula WSM:</strong> S<sub>i</sub> = Σ (w<sub>j</sub> × R<sub>ij</sub>), di mana R<sub>ij</sub> = Nilai Skala / 5.
-            Data di atas adalah <span class="badge bg-warning text-dark">DATA DEMO</span> — bukan data penelitian final. Bobot dan skala dapat diubah melalui halaman Matriks AHP.
+            <strong>Sintesis Nilai AHP:</strong> V<sub>i</sub> = Σ (w<sub>j</sub> × S<sub>ij</sub>), di mana S<sub>ij</sub> = Nilai Skala / 5 dan w<sub>j</sub> = Bobot Kriteria AHP.
+            Data di atas adalah <span class="badge bg-warning text-dark">DATA DEMO</span> — bukan data penelitian final. Bobot kriteria dapat diubah melalui halaman Matriks AHP.
         </div>
     </div>
 @else

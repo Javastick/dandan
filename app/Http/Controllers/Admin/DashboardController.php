@@ -25,7 +25,7 @@ class DashboardController extends Controller
             'total_reports_count' => Report::count(),
         ];
 
-        // 5 Titik Sampah Prioritas Tertinggi (AHP-WSM)
+        // 5 Titik Sampah Prioritas Tertinggi (AHP)
         $topPriorities = WastePoint::whereIn('status', ['terverifikasi', 'diproses'])
             ->withCount('reports')
             ->orderByRaw('CASE WHEN `rank` IS NULL THEN 1 ELSE 0 END, `rank` ASC, `total_score` DESC')

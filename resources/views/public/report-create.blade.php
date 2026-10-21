@@ -156,16 +156,47 @@
                             <h6 class="fw-bold text-dark mb-3"><i class="bi bi-camera me-2"></i>Foto Bukti & Keterangan</h6>
                             
                             <div class="mb-3">
-                                <label for="photo" class="form-label small fw-semibold">Unggah Foto Sampah Liar <span class="text-danger">*</span></label>
-                                <input type="file" 
-                                       name="photo" 
-                                       id="photo" 
-                                       class="form-control @error('photo') is-invalid @enderror" 
-                                       accept="image/*" 
-                                       required>
-                                <div class="form-text small">Format gambar JPG, PNG, atau WEBP. Ukuran maksimal 5 MB.</div>
-                                @error('photo')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <label class="form-label small fw-semibold">
+                                    Unggah Foto Sampah <span class="text-danger">*</span> 
+                                    <span class="badge bg-secondary ms-1">Maks. 3 Foto</span>
+                                </label>
+
+                                <!-- Dropzone / Box Upload Simpel -->
+                                <div id="dropzoneContainer" class="border border-2 border-dashed rounded-3 p-4 text-center bg-white position-relative" style="cursor: pointer; transition: all 0.2s ease;">
+                                    <input type="file" 
+                                           name="photos[]" 
+                                           id="photosInput" 
+                                           class="d-none" 
+                                           accept="image/jpeg,image/png,image/webp" 
+                                           multiple>
+                                    
+                                    <div id="dropzonePrompt">
+                                        <div class="bg-success-subtle text-success p-3 rounded-circle d-inline-flex mb-2">
+                                            <i class="bi bi-cloud-arrow-up fs-3"></i>
+                                        </div>
+                                        <div class="fw-semibold text-dark">Klik atau seret foto ke area ini</div>
+                                        <div class="text-muted small">(Format JPG, PNG, atau WEBP, maks 5 MB per foto)</div>
+                                        <button type="button" class="btn btn-outline-success btn-sm mt-2 px-3 fw-semibold" id="btnSelectPhotos">
+                                            <i class="bi bi-images me-1"></i> Pilih Foto
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Galeri Preview Foto Terpilih -->
+                                <div id="previewContainer" class="row g-2 mt-2 d-none">
+                                    <!-- Dynamic photo cards will be inserted here -->
+                                </div>
+
+                                <div id="photoCountNotice" class="small text-muted mt-2 d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-info-circle me-1"></i>Anda dapat memilih 1 hingga 3 foto sekaligus.</span>
+                                    <span id="selectedCountBadge" class="badge bg-dark d-none">0/3 Foto Terpilih</span>
+                                </div>
+
+                                @error('photos')
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ $message }}</div>
+                                @enderror
+                                @error('photos.*')
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ $message }}</div>
                                 @enderror
                             </div>
 
@@ -175,7 +206,7 @@
                                           id="description" 
                                           rows="3" 
                                           class="form-control @error('description') is-invalid @enderror" 
-                                          placeholder="Jelaskan patokan lokasi dan kondisi tumpukan sampah (contoh: Bahu jalan sebelah timur jembatan rel KA, 50 meter di belakang Pasar Seng. Kondisi tumpukan sampah plastik dan limbah rumah tangga berbau menyengat)" 
+                                          placeholder="Tulis deskripsi..." 
                                           required>{{ old('description') }}</textarea>
                                 <div class="form-text small">Sertakan patokan tempat agar tim verifikasi mudah menemukan lokasi sampah.</div>
                                 @error('description')
@@ -423,6 +454,158 @@ document.addEventListener('DOMContentLoaded', function () {
             e.preventDefault();
             showAlert('danger', '<i class="bi bi-x-circle-fill me-1"></i> <strong>Titik lokasi belum ditentukan!</strong> Silakan klik tombol <strong>"Lokasi Saat Ini"</strong> atau ketuk titik sampah pada peta.');
             document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        if (selectedFiles.length === 0) {
+            e.preventDefault();
+            alert('Silakan pilih minimal 1 foto bukti tumpukan sampah.');
+            document.getElementById('dropzoneContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+    });
+
+    // ----------------------------------------------------
+    // Logika Pengunggahan & Pratinjau Foto (Maksimal 3 Foto)
+    // ----------------------------------------------------
+    const dropzoneContainer = document.getElementById('dropzoneContainer');
+    const photosInput = document.getElementById('photosInput');
+    const btnSelectPhotos = document.getElementById('btnSelectPhotos');
+    const previewContainer = document.getElementById('previewContainer');
+    const selectedCountBadge = document.getElementById('selectedCountBadge');
+
+    let selectedFiles = []; // Menyimpan file terpilih
+
+    function updatePhotosInput() {
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => dt.items.add(file));
+        photosInput.files = dt.files;
+
+        // Render preview
+        renderPreview();
+    }
+
+    function renderPreview() {
+        previewContainer.innerHTML = '';
+
+        if (selectedFiles.length === 0) {
+            previewContainer.classList.add('d-none');
+            selectedCountBadge.classList.add('d-none');
+            dropzoneContainer.classList.remove('d-none');
+            return;
+        }
+
+        previewContainer.classList.remove('d-none');
+        selectedCountBadge.classList.remove('d-none');
+        selectedCountBadge.textContent = `${selectedFiles.length}/3 Foto Terpilih`;
+
+        // Sembunyikan dropzone jika sudah mencapai 3 foto
+        if (selectedFiles.length >= 3) {
+            dropzoneContainer.classList.add('d-none');
+        } else {
+            dropzoneContainer.classList.remove('d-none');
+        }
+
+        selectedFiles.forEach((file, index) => {
+            const col = document.createElement('div');
+            col.className = 'col-4';
+
+            const card = document.createElement('div');
+            card.className = 'card border shadow-sm position-relative h-100 overflow-hidden';
+
+            const img = document.createElement('img');
+            img.className = 'card-img-top';
+            img.style.height = '110px';
+            img.style.objectFit = 'cover';
+            img.src = URL.createObjectURL(file);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 m-1 p-0 d-flex align-items-center justify-content-center shadow';
+            removeBtn.style.width = '24px';
+            removeBtn.style.height = '24px';
+            removeBtn.innerHTML = '<i class="bi bi-x fs-6"></i>';
+            removeBtn.title = 'Hapus foto';
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectedFiles.splice(index, 1);
+                updatePhotosInput();
+            });
+
+            const cardBody = document.createElement('div');
+            cardBody.className = 'card-body p-1 text-center bg-white';
+            const sizeInMb = (file.size / (1024 * 1024)).toFixed(1);
+            cardBody.innerHTML = `<small class="text-muted d-block text-truncate" style="font-size: 11px;">Foto ${index + 1} (${sizeInMb} MB)</small>`;
+
+            card.appendChild(img);
+            card.appendChild(removeBtn);
+            card.appendChild(cardBody);
+            col.appendChild(card);
+            previewContainer.appendChild(col);
+        });
+    }
+
+    function handleIncomingFiles(fileList) {
+        const remainingSlots = 3 - selectedFiles.length;
+        if (remainingSlots <= 0) {
+            alert('Maksimal hanya dapat mengunggah 3 foto.');
+            return;
+        }
+
+        const validFiles = Array.from(fileList).filter(file => {
+            if (!file.type.match(/^image\/(jpeg|png|webp)$/i)) {
+                alert(`File ${file.name} bukan format gambar yang didukung (JPG, PNG, WEBP).`);
+                return false;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert(`Ukuran foto ${file.name} melebihi batas 5 MB.`);
+                return false;
+            }
+            return true;
+        });
+
+        if (validFiles.length > remainingSlots) {
+            alert(`Hanya ${remainingSlots} foto pertama yang akan ditambahkan karena batas maksimal 3 foto.`);
+        }
+
+        const toAdd = validFiles.slice(0, remainingSlots);
+        selectedFiles = selectedFiles.concat(toAdd);
+        updatePhotosInput();
+    }
+
+    dropzoneContainer.addEventListener('click', () => photosInput.click());
+    btnSelectPhotos.addEventListener('click', (e) => {
+        e.stopPropagation();
+        photosInput.click();
+    });
+
+    photosInput.addEventListener('change', function () {
+        if (this.files && this.files.length > 0) {
+            handleIncomingFiles(this.files);
+        }
+    });
+
+    // Drag and Drop
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzoneContainer.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzoneContainer.classList.add('border-success', 'bg-light');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzoneContainer.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzoneContainer.classList.remove('border-success', 'bg-light');
+        });
+    });
+
+    dropzoneContainer.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        if (dt && dt.files && dt.files.length > 0) {
+            handleIncomingFiles(dt.files);
         }
     });
 

@@ -74,7 +74,22 @@
                     <dt class="col-sm-3 text-muted">Total Aduan Warga</dt>
                     <dd class="col-sm-9"><span class="badge bg-light text-dark border">{{ $wastePoint->reports_count }} Laporan</span></dd>
 
-                    <dt class="col-sm-3 text-muted">Skor Prioritas (WSM)</dt>
+                    <dt class="col-sm-3 text-muted">Petugas Ditugaskan</dt>
+                    <dd class="col-sm-9">
+                        @if($wastePoint->assignedOfficer)
+                            <span class="badge bg-primary fs-6"><i class="bi bi-person-badge me-1"></i>{{ $wastePoint->assignedOfficer->name }}</span>
+                            <span class="text-muted small ms-1">({{ $wastePoint->assignedOfficer->phone ?? '-' }})</span>
+                        @else
+                            <span class="text-muted fst-italic">Belum ada petugas ditugaskan</span>
+                        @endif
+                    </dd>
+
+                    @if($wastePoint->handling_notes)
+                        <dt class="col-sm-3 text-muted">Catatan Penanganan</dt>
+                        <dd class="col-sm-9 small text-dark bg-light p-2 rounded border">{{ $wastePoint->handling_notes }}</dd>
+                    @endif
+
+                    <dt class="col-sm-3 text-muted">Skor Prioritas (AHP)</dt>
                     <dd class="col-sm-9 font-monospace fw-bold fs-6 text-danger">
                         {{ number_format($wastePoint->total_score, 4) }}
                         @if($wastePoint->rank)
@@ -95,10 +110,10 @@
             </div>
         </div>
 
-        <!-- Tabel Rincian Penilaian Kriteria AHP-WSM -->
+        <!-- Tabel Rincian Penilaian Kriteria AHP -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h6 class="fw-bold mb-0"><i class="bi bi-calculator text-primary me-2"></i>Rincian Komputasi Penilaian Kriteria</h6>
+                <h6 class="fw-bold mb-0"><i class="bi bi-calculator text-primary me-2"></i>Rincian Komputasi Penilaian Kriteria AHP</h6>
                 <a href="{{ route('admin.waste_points.edit_assessment', $wastePoint->id) }}" class="btn btn-outline-primary btn-sm">
                     <i class="bi bi-pencil me-1"></i> Edit Nilai
                 </a>
@@ -111,9 +126,9 @@
                                 <th>Kode</th>
                                 <th class="text-start">Kriteria</th>
                                 <th>Nilai Skala (1-5)</th>
-                                <th>Ternormalisasi (R_ij)</th>
+                                <th>Ternormalisasi (S_ij)</th>
                                 <th>Bobot AHP (w_j)</th>
-                                <th>Subtotal (w_j * R_ij)</th>
+                                <th>Subtotal (w_j * S_ij)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -139,7 +154,7 @@
                                 </tr>
                             @endforeach
                             <tr class="table-light fw-bold">
-                                <td colspan="5" class="text-end pe-3">Total Skor Komposit Prioritas (WSM):</td>
+                                <td colspan="5" class="text-end pe-3">Total Nilai Preferensi Prioritas (AHP):</td>
                                 <td class="font-monospace text-danger fs-6">{{ number_format($calcSum, 4) }}</td>
                             </tr>
                         </tbody>
@@ -182,13 +197,37 @@
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tugaskan Petugas Lapangan</label>
+                        <select name="assigned_to" class="form-select form-select-sm">
+                            <option value="">-- Belum Ditugaskan --</option>
+                            @foreach($officers as $officer)
+                                <option value="{{ $officer->id }}" {{ $wastePoint->assigned_to == $officer->id ? 'selected' : '' }}>
+                                    {{ $officer->name }} ({{ $officer->phone ?? '-' }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <div class="form-text small">Pilih personil/tim lapangan yang bertugas mengangkut sampah.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Catatan Penanganan / Instruksi</label>
+                        <textarea name="handling_notes" class="form-control form-control-sm" rows="2" placeholder="Catatan untuk petugas atau kendala di lapangan...">{{ old('handling_notes', $wastePoint->handling_notes) }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label small fw-semibold">Unggah Foto Bukti Penanganan (Opsional/Selesai)</label>
                         <input type="file" name="resolution_photo" class="form-control form-control-sm" accept="image/*">
+                        @if($wastePoint->resolution_photo)
+                            <div class="mt-2 text-center border rounded p-1 bg-light">
+                                <img src="{{ asset('storage/' . $wastePoint->resolution_photo) }}" alt="Foto Bukti" class="img-fluid rounded" style="max-height: 120px;">
+                                <div class="small text-success mt-1"><i class="bi bi-check-circle-fill me-1"></i> Foto bukti sudah terunggah</div>
+                            </div>
+                        @endif
                         <div class="form-text small">Unggah foto kondisi lokasi setelah tumpukan sampah liar diangkut dan dibersihkan.</div>
                     </div>
 
                     <button type="submit" class="btn btn-success w-100 fw-semibold">
-                        <i class="bi bi-save me-1"></i> Perbarui Status Penanganan
+                        <i class="bi bi-save me-1"></i> Simpan Penugasan & Status
                     </button>
                 </form>
             </div>
@@ -237,10 +276,88 @@ document.addEventListener('DOMContentLoaded', function () {
         maxZoom: 19
     }).addTo(map);
 
-    L.marker([lat, lng])
+    const bounds = [[lat, lng]];
+
+    // Marker Titik Sampah (Merah)
+    const trashIcon = L.divIcon({
+        className: 'custom-pin-trash',
+        html: '<div style="background-color: #dc3545; color: white; border: 2px solid white; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"><i class="bi bi-trash-fill fs-6"></i></div>',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
+    });
+
+    L.marker([lat, lng], { icon: trashIcon })
         .addTo(map)
         .bindPopup('<strong>{{ $wastePoint->point_code }}</strong><br>{{ $wastePoint->name }}<br><small>{{ $wastePoint->village }}, Kec. {{ $wastePoint->subdistrict }}</small>')
         .openPopup();
+
+    @if($spatialAnalysis)
+        const riverInfo = @json($spatialAnalysis['river']);
+        const settlementInfo = @json($spatialAnalysis['settlement']);
+
+        // 1. Sungai Terdekat (Marker Biru & Garis Ukur)
+        if (riverInfo.nearest_point) {
+            const riverLat = riverInfo.nearest_point[0];
+            const riverLng = riverInfo.nearest_point[1];
+            bounds.push([riverLat, riverLng]);
+
+            const riverIcon = L.divIcon({
+                className: 'custom-pin-river',
+                html: '<div style="background-color: #0d6efd; color: white; border: 2px solid white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="bi bi-water fs-6"></i></div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            L.marker([riverLat, riverLng], { icon: riverIcon })
+                .addTo(map)
+                .bindPopup(`<strong>${riverInfo.nearest_name}</strong><br><small class="text-primary">${riverInfo.type}</small><br>Jarak ke sampah: <strong>${riverInfo.formatted}</strong>`);
+
+            L.polyline([[lat, lng], [riverLat, riverLng]], {
+                color: '#0d6efd',
+                weight: 3,
+                dashArray: '5, 5',
+                opacity: 0.8
+            }).addTo(map).bindTooltip(`Jarak ke ${riverInfo.nearest_name}: ${riverInfo.formatted}`, { sticky: true });
+
+            if (riverInfo.line_coordinates && riverInfo.line_coordinates.length > 1) {
+                const polylineCoords = riverInfo.line_coordinates.map(c => [c[1], c[0]]);
+                L.polyline(polylineCoords, {
+                    color: '#0dcaf0',
+                    weight: 4,
+                    opacity: 0.6
+                }).addTo(map).bindTooltip(`Aliran ${riverInfo.nearest_name}`);
+            }
+        }
+
+        // 2. Pemukiman Terdekat (Marker Oranye / Rumah)
+        if (settlementInfo.coordinates) {
+            const setLat = settlementInfo.coordinates[0];
+            const setLng = settlementInfo.coordinates[1];
+            bounds.push([setLat, setLng]);
+
+            const houseIcon = L.divIcon({
+                className: 'custom-pin-house',
+                html: '<div style="background-color: #fd7e14; color: white; border: 2px solid white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="bi bi-houses-fill fs-6"></i></div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            L.marker([setLat, setLng], { icon: houseIcon })
+                .addTo(map)
+                .bindPopup(`<strong>${settlementInfo.nearest_name}</strong><br><small class="text-muted">Kecamatan ${settlementInfo.subdistrict}</small><br>Jarak ke sampah: <strong>${settlementInfo.formatted}</strong>`);
+
+            L.polyline([[lat, lng], [setLat, setLng]], {
+                color: '#fd7e14',
+                weight: 3,
+                dashArray: '5, 5',
+                opacity: 0.8
+            }).addTo(map).bindTooltip(`Jarak ke Pemukiman: ${settlementInfo.formatted}`, { sticky: true });
+        }
+
+        if (bounds.length > 1) {
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+        }
+    @endif
 });
 </script>
 @endpush
